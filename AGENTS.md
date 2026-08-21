@@ -66,3 +66,11 @@ $cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE
   3.5 未満だと非推奨警告が出る。
 - (2026-08-21) submodule 初期化には `git submodule update --init --recursive`
   が必須(draco/glm/picojson は KashikaNativeLib の入れ子 submodule)。
+- (2026-08-21) Maya 2022/2023/2024 は **無修正でビルド成功**(VS2022 v143、
+  C++11 設定のまま)。draco 1.3.3 も MSVC 19.39 でエラーなし。
+- (2026-08-21) 残っている C4996 非推奨警告(2024 時点ではビルド可):
+  `MFnDependencyNode::findPlug(name)`(→ 3 引数版)、`MFileObject::name`
+  (→ resolvedName)、`MFileObject::fullName`(→ resolvedFullName)、
+  `MItGeometry::component`(→ currentItem)。すべて src/glTFExporter/glTFExporter.cpp。
+- (2026-08-21) mayapy スモークテストの GLTF 出力は `<名前>/<名前>.gltf` の
+  ディレクトリ構造になる(GLB は単一ファイル)。
