@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2.3)
+cmake_minimum_required(VERSION 3.15)
 
 #Use solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -13,10 +13,16 @@ option(GLTF_MAYA_EXPORTER_BUILD_CPP_INTERFACE       "Build cpp interface and tes
 option(GLTF_MAYA_EXPORTER_SUPPORT_LTE_PBR_MATERIAL  "Build LTE_PBR_material support" ON)
 
 
+# Target Maya version (2017-2027). Used to locate the default Maya directory;
+# override GLTF_MAYA_EXPORTER_MAYA_PATH directly for non-standard installs.
+SET(GLTF_MAYA_EXPORTER_MAYA_VERSION "2024" CACHE STRING "Target Maya version (e.g. 2017...2027)")
+
 if (WIN32)
-    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "C:/Program Files/Autodesk/Maya2018" CACHE PATH "Installed Maya Directory")
+    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "C:/Program Files/Autodesk/Maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")
 elseif(APPLE)
-    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "/Applications/Autodesk/maya2018" CACHE PATH "Installed Maya Directory")
+    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "/Applications/Autodesk/maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")
+elseif(UNIX)
+    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "/usr/autodesk/maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")
 endif()
 
 if (GLTF_MAYA_EXPORTER_SUPPORT_LTE_PBR_MATERIAL)
@@ -30,7 +36,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE On)
 # -- draco setting ---------------------------------------------- 
 if(GLTF_MAYA_EXPORTER_BUILD_WITH_DRACO)
     # DRACO setting
-    add_subdirectory(externals/draco)
+    add_subdirectory(src/KashikaNativeLib/externals/draco)
 
     ## beautify ME!
     set_target_properties(draco PROPERTIES FOLDER Draco)
@@ -65,7 +71,7 @@ if(GLTF_MAYA_EXPORTER_BUILD_WITH_DRACO)
     set(DRACO_LIB draco)
     add_definitions(-DENABLE_BUILD_WITH_DRACO)
 
-    set(DRACO_SRC_PATH externals/draco/src/)
+    set(DRACO_SRC_PATH src/KashikaNativeLib/externals/draco/src/)
 endif()
 
 
@@ -95,9 +101,10 @@ set (CMAKE_CXX_STANDARD 11)
 
 include_directories(
     ${CMAKE_BINARY_DIR}
-    externals/glm/
-    externals/
     src/
+    src/KashikaNativeLib/src/
+    src/KashikaNativeLib/externals/
+    src/KashikaNativeLib/externals/glm/
     ${BUILD_DIR}/
     ${DRACO_SRC_PATH}
     ${MAYA_INCLUDE_PATH}
@@ -109,34 +116,35 @@ link_directories(${MAYA_LIBRARY_PATH})
 
 # -- KIL lib ------------------------------------
 add_library( kil STATIC
-    ./src/kil/CopyTextureFile.cpp
-    ./src/kil/CopyTextureFile_GdiPlus.cpp
-    ./src/kil/CopyTextureFile_STB.cpp
-    ./src/kil/ResizeTextureFile.cpp
+    ./src/KashikaNativeLib/src/kil/CopyTextureFile.cpp
+    ./src/KashikaNativeLib/src/kil/CopyTextureFile_GdiPlus.cpp
+    ./src/KashikaNativeLib/src/kil/CopyTextureFile_STB.cpp
+    ./src/KashikaNativeLib/src/kil/ResizeTextureFile.cpp
+    ./src/KashikaNativeLib/src/kil/HasAlphaChannel.cpp
 )
 
 # -- KML lib ------------------------------------
 if(WIN32)
-    set(Compatibility ./src/kml/Compatibility.cpp)
+    set(Compatibility ./src/KashikaNativeLib/src/kml/Compatibility.cpp)
 endif()
 
 add_library( kml STATIC
-    ./src/kml/Bound.cpp
-    ./src/kml/CalculateBound.cpp
-    ./src/kml/CalculateNormalsMesh.cpp
+    ./src/KashikaNativeLib/src/kml/Bound.cpp
+    ./src/KashikaNativeLib/src/kml/CalculateBound.cpp
+    ./src/KashikaNativeLib/src/kml/CalculateNormalsMesh.cpp
     ${Compatibility}
-    ./src/kml/FlatIndicesMesh.cpp
-    ./src/kml/GLTF2GLB.cpp
-    ./src/kml/glTFExporter.cpp
-    ./src/kml/Material.cpp
-    ./src/kml/Mesh.cpp
-    ./src/kml/Node.cpp
-    ./src/kml/NodeExporter.cpp
-    ./src/kml/Options.cpp
-    ./src/kml/SaveToDraco.cpp
-    ./src/kml/SplitNodeByMaterialID.cpp
-    ./src/kml/Transform.cpp
-    ./src/kml/TriangulateMesh.cpp
+    ./src/KashikaNativeLib/src/kml/FlatIndicesMesh.cpp
+    ./src/KashikaNativeLib/src/kml/GLTF2GLB.cpp
+    ./src/KashikaNativeLib/src/kml/glTFExporter.cpp
+    ./src/KashikaNativeLib/src/kml/Material.cpp
+    ./src/KashikaNativeLib/src/kml/Mesh.cpp
+    ./src/KashikaNativeLib/src/kml/Node.cpp
+    ./src/KashikaNativeLib/src/kml/NodeExporter.cpp
+    ./src/KashikaNativeLib/src/kml/Options.cpp
+    ./src/KashikaNativeLib/src/kml/SaveToDraco.cpp
+    ./src/KashikaNativeLib/src/kml/SplitNodeByMaterialID.cpp
+    ./src/KashikaNativeLib/src/kml/Transform.cpp
+    ./src/KashikaNativeLib/src/kml/TriangulateMesh.cpp
 )
 
 target_link_libraries( kml 

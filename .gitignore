@@ -17,6 +17,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# distribution folder of this repository (overrides the VS template rule above)
+!/releases/
 x64/
 x86/
 bld/
@@ -328,6 +330,12 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+.DS_Store
+
 build/
 maya
 .vscode/
+
+# CMake build directories (per-Maya-version, e.g. build2024/)
+build*/

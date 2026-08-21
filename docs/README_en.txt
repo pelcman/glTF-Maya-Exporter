@@ -6,17 +6,17 @@
 
 　A: Install Maya system folder
 
-　　Copy "glTFExporter.mll" into "C:\Program Files\Autodesk\Maya2018\bin\plug-ins"
-    Copy "glTFExporterOptions.mel" into "C:\Program Files\Autodesk\Maya2018\scripts\others"
-    Copy "glTFExporterOptions.res.mel" into "C:\Program Files\Autodesk\Maya2018\scripts\others"
+　　Copy "glTFExporter.mll" into "C:\Program Files\Autodesk\Maya2024\bin\plug-ins"
+    Copy "glTFExporterOptions.mel" into "C:\Program Files\Autodesk\Maya2024\scripts\others"
+    Copy "glTFExporterOptions.res.mel" into "C:\Program Files\Autodesk\Maya2024\scripts\others"
 
 　B: Install your user folder
-    Make folder at "C:\Users\[your-account]\Documents\maya\2018\plug-ins"
-　　Copy "glTFExporter.mll" into "C:\Program Files\Autodesk\Maya2018\bin\plug-ins"
-    Copy "glTFExporterOptions.mel" into "C:\Users\[your-account]\Documents\maya\2018\en_US\scripts"
-    Copy "glTFExporterOptions.res.mel" into "C:\Users\[your-account]\Documents\maya\2018\en_US\scripts"
+    Make folder at "C:\Users\[your-account]\Documents\maya\2024\plug-ins"
+　　Copy "glTFExporter.mll" into "C:\Program Files\Autodesk\Maya2024\bin\plug-ins"
+    Copy "glTFExporterOptions.mel" into "C:\Users\[your-account]\Documents\maya\2024\en_US\scripts"
+    Copy "glTFExporterOptions.res.mel" into "C:\Users\[your-account]\Documents\maya\2024\en_US\scripts"
     Execute the below commnad on the Maya to set environment variable
-	putenv "MAYA_PLUG_IN_PATH" "C:\Users\[your-account]\Documents\maya\2018\plug-ins"
+	putenv "MAYA_PLUG_IN_PATH" "C:\Users\[your-account]\Documents\maya\2024\plug-ins"
 
 ** Options
 　- Recalc normals: This plugin recalculates mesh normals when this flag is "On".

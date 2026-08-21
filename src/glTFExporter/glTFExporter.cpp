@@ -664,6 +664,7 @@ MStatus glTFExporter::writer(const MFileObject& file, const MString& options, Fi
     int freeze_skinned_mesh_transform = 1; //0:no_bake, 1:bake veritces
     int output_animations = 1;             //0:no output, 1: output animation
     int output_invisible_nodes = 0;        //0:
+    int output_single_animation = 0;       //0:off, 1:on
 
     switch ((int)this->mode_)
     {
@@ -755,6 +756,10 @@ MStatus glTFExporter::writer(const MFileObject& file, const MString& options, Fi
             if (theOption[0] == MString("output_animations") && theOption.length() > 1)
             {
                 output_animations = theOption[1].asInt();
+            }
+            if (theOption[0] == MString("output_single_animation") && theOption.length() > 1)
+            {
+                output_single_animation = theOption[1].asInt();
             }
             if (theOption[0] == MString("output_invisible_nodes") && theOption.length() > 1)
             {
@@ -852,6 +857,7 @@ MStatus glTFExporter::writer(const MFileObject& file, const MString& options, Fi
     opts->SetInt("transform_space", transform_space);
     opts->SetInt("freeze_skinned_mesh_transform", freeze_skinned_mesh_transform);
     opts->SetInt("output_animations", output_animations);
+    opts->SetInt("output_single_animation", output_single_animation);
     opts->SetInt("output_invisible_nodes", output_invisible_nodes);
 
     opts->SetString("generator_name", generator_name);
@@ -2079,13 +2085,28 @@ static bool storeAiStandardSurfaceShader(std::shared_ptr<kml::Material> mat, con
         mat->SetTexture("BaseColor", baseColorTex);
     }
     mat->SetFloat("metallicFactor", metallic);
-    mat->SetFloat("roughnessFactor", specularRoughness);
+    // glTF has a single roughness while Arnold's specular roughness only
+    // takes effect when a specular lobe exists (specular weight > 0 or
+    // metalness > 0, metalness keeps the lobe even at weight 0). Fade to
+    // fully rough as the lobe disappears so that "no specular" survives
+    // the conversion. Arnold's diffuse roughness (Oren-Nayar) has no glTF
+    // counterpart (glTF diffuse is always Lambertian) and is not used.
+    {
+        float specularLobe = std::max(metallic, specularWeight);
+        specularLobe = std::min(std::max(specularLobe, 0.0f), 1.0f);
+        const float roughnessFactor = specularRoughness * specularLobe + (1.0f - specularLobe);
+        mat->SetFloat("roughnessFactor", roughnessFactor);
+    }
 
     mat->SetFloat("Emission.R", emissionCol.r * emissionWeight);
     mat->SetFloat("Emission.G", emissionCol.g * emissionWeight);
     mat->SetFloat("Emission.B", emissionCol.b * emissionWeight);
     if (emissionColorTex)
     {
+        mat->SetFloat("Emission.R", emissionWeight);
+        mat->SetFloat("Emission.G", emissionWeight);
+        mat->SetFloat("Emission.B", emissionWeight);
+
         mat->SetTexture("Emission", emissionColorTex);
     }
     return true;
@@ -2230,9 +2251,27 @@ static bool storeAiStandardHairShader(std::shared_ptr<kml::Material> mat, const 
     mat->SetFloat("Emission.B", emissionCol.b * emissionWeight);
     if (emissionColorTex)
     {
+        mat->SetFloat("Emission.R", emissionWeight);
+        mat->SetFloat("Emission.G", emissionWeight);
+        mat->SetFloat("Emission.B", emissionWeight);
+
         mat->SetTexture("Emission", emissionColorTex);
     }
     return true;
+}
+
+static bool HasTextureAlpha(const std::shared_ptr<kml::Texture>& tex)
+{
+    if(tex)
+    {
+        std::string texPath = tex->GetFilePath();
+        std::string texExt = GetExt(texPath);
+        if(texExt == ".png")
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 static std::shared_ptr<kml::Material> ConvertMaterial(MObject& shaderObject)
@@ -2304,6 +2343,38 @@ static std::shared_ptr<kml::Material> ConvertMaterial(MObject& shaderObject)
                     }
                 }
             }
+			
+			if (mpa[k].node().hasFn(MFn::kSurfaceShader)) // This is "SurfaceShader" node
+			{
+                // set unlit mode
+                //mat->SetExtraMode("UNLIT"); // TODO!! create unlit interface
+                mat->SetString("ShadingMode", "UNLIT");
+                const MFnDependencyNode& ssnode = mpa[k].node();
+                MColor col;
+                float alpha = 1.0f;
+                {
+                    const float tR = ssnode.findPlug("outTransparencyR").asFloat();
+                    const float tG = ssnode.findPlug("outTransparencyG").asFloat();
+                    const float tB = ssnode.findPlug("outTransparencyB").asFloat();
+                    alpha = ((1.0f - tR) + (1.0f - tG) + (1.0f - tB)) * 0.333333333f; 
+                }
+				std::shared_ptr<kml::Texture> coltex(nullptr);
+                if (getTextureAndColor(ssnode, MString("outColor"), coltex, col))
+                {
+                    if (coltex)
+                    {
+                        mat->SetTexture("BaseColor", coltex);
+                    }
+                    else
+                    {
+                        mat->SetFloat("BaseColor.R", col.r);
+                        mat->SetFloat("BaseColor.G", col.g);
+                        mat->SetFloat("BaseColor.B", col.b);
+                        mat->SetFloat("BaseColor.A", alpha);
+                    }
+                }
+			}
+            
 
             if (mpa[k].node().hasFn(MFn::kPhongExplorer))
             { // PhongE only
@@ -2337,8 +2408,46 @@ static std::shared_ptr<kml::Material> ConvertMaterial(MObject& shaderObject)
                 storeAiStandardSurfaceShader(mat, mpa[k].node());
             }
 
+            {
+                std::string alphaMode = "OPAQUE";
+                MStatus stat = MS::kSuccess;
+                const MFnDependencyNode& ssnode = mpa[k].node();
+                MPlug plugAlphaMask = ssnode.findPlug("alphaMask", &stat);
+                bool alphaMask = false;
+                if(stat == MS::kSuccess)
+                {
+                    plugAlphaMask.getValue(alphaMask);
+                }
+
+                if(alphaMask)
+                {
+                    //if a shader has extra attribute  
+                    alphaMode = "MASK";
+                    float alphaCutoff = 0.5f;
+                    MPlug plugAlphaCutoff = ssnode.findPlug("alphaCutoff", &stat);
+                    if(stat == MS::kSuccess)
+                    {
+                        plugAlphaCutoff.getValue(alphaCutoff);
+                    }
+                    mat->SetFloat("AlphaCutoff", alphaCutoff);
+                }
+                else
+                {
+                    float A = mat->GetFloat("BaseColor.A");
+                    std::shared_ptr<kml::Texture> baseColorTex = mat->GetTexture("BaseColor");
+                    if(A < 1.0f || HasTextureAlpha(baseColorTex))
+                    {
+                        alphaMode = "BLEND";
+                    }
+                }
+                mat->SetString("AlphaMode", alphaMode);
+            }
+
         }
     }
+
+    //BlendMode
+    
 
     return mat;
 }
@@ -2530,6 +2639,23 @@ static bool IsVisibleLeafNode(const std::shared_ptr<kml::Node>& node)
     }
 }
 
+static bool IsMeshDoubleSided(const MDagPath& dagPath)
+{
+    MStatus status;
+    MFnMesh fnMesh(dagPath, &status);
+    if (status != MS::kSuccess)
+    {
+        return false;
+    }
+    bool doubleSided = false;
+    MPlug plug = fnMesh.findPlug("doubleSided");
+    if (!plug.isNull())
+    {
+        plug.getValue(doubleSided);
+    }
+    return doubleSided;
+}
+
 static MStatus WriteGLTF(
     TexturePathManager& texManager,
     std::map<int, std::shared_ptr<kml::Material> >& materials,
@@ -2704,6 +2830,17 @@ static MStatus WriteGLTF(
 
                 node->AddMaterial(mat);
             }
+        }
+    }
+    // Maya's Double Sided flag lives on the mesh shape while glTF's
+    // doubleSided flag lives on the material, so mark a material double
+    // sided as soon as one mesh that uses it is double sided.
+    if (IsMeshDoubleSided(dagPath))
+    {
+        const auto& mats = node->GetMaterials();
+        for (size_t i = 0; i < mats.size(); i++)
+        {
+            mats[i]->SetInteger("DoubleSided", 1);
         }
     }
     if (!recalc_normals)
@@ -3758,19 +3895,9 @@ static void GetAnimationsFromTransform(std::vector<std::shared_ptr<kml::Animatio
                 std::sort(rotationKeys.begin(), rotationKeys.end());
                 rotationKeys.erase(std::unique(rotationKeys.begin(), rotationKeys.end()), rotationKeys.end());
 
-                std::vector<glm::vec3> values(rotationKeys.size());
-                for (size_t j = 0; j < rotationKeys.size(); j++)
-                {
-                    values[j] = glm::vec3(rr.x, rr.y, rr.z);
-                }
-#ifndef NDEBUG
-                std::vector<glm::vec3> angles(rotationKeys.size());
-                for (size_t j = 0; j < rotationKeys.size(); j++)
-                {
-                    angles[j] = glm::vec3(ToDegree(rr.x), ToDegree(rr.y), ToDegree(rr.z));
-                }
-#endif
-
+                // group the anim curves per axis so the rotation can be
+                // evaluated at arbitrary times, not only at authored keys
+                std::vector<MObject> axisCurves[3];
                 for (int j = 0; j < rotationPlugs.size(); j++)
                 {
                     MPlug plug = rotationPlugs[j];
@@ -3782,6 +3909,23 @@ static void GetAnimationsFromTransform(std::vector<std::shared_ptr<kml::Animatio
 
                     std::string name = plug.name().asChar();
                     std::string typeName = name.substr(name.find(".") + 1);
+                    int axis = -1;
+                    if (typeName == "rotateX")
+                    {
+                        axis = 0;
+                    }
+                    else if (typeName == "rotateY")
+                    {
+                        axis = 1;
+                    }
+                    else if (typeName == "rotateZ")
+                    {
+                        axis = 2;
+                    }
+                    if (axis < 0)
+                    {
+                        continue;
+                    }
 
                     unsigned int numCurves = animation.length();
                     for (unsigned int c = 0; c < numCurves; c++)
@@ -3789,61 +3933,89 @@ static void GetAnimationsFromTransform(std::vector<std::shared_ptr<kml::Animatio
                         MObject animCurveNode = animation[c];
                         if (!animCurveNode.hasFn(MFn::kAnimCurve))
                             continue;
-                        MFnAnimCurve animCurve(animCurveNode);
-
-                        for (size_t k = 0; k < rotationKeys.size(); k++)
-                        {
-                            double second = rotationKeys[k];
-                            double value = animCurve.evaluate(MTime(second, MTime::kSeconds));
-
-#ifndef NDEBUG
-                            double angle = ToDegree(value);
-                            if (typeName == "rotateX")
-                            {
-                                angles[k].x = angle;
-                            }
-                            else if (typeName == "rotateY")
-                            {
-                                angles[k].y = angle;
-                            }
-                            else if (typeName == "rotateZ")
-                            {
-                                angles[k].z = angle;
-                            }
-#endif
-
-                            if (typeName == "rotateX")
-                            {
-                                values[k].x = value;
-                            }
-                            else if (typeName == "rotateY")
-                            {
-                                values[k].y = value;
-                            }
-                            else if (typeName == "rotateZ")
-                            {
-                                values[k].z = value;
-                            }
-                        }
+                        axisCurves[axis].push_back(animCurveNode);
                     }
                 }
 
-                std::vector<glm::quat> values2(rotationKeys.size());
-#ifndef NDEBUG
-                std::vector<double> angle2(rotationKeys.size());
-#endif
+                auto evalEuler = [&](double sec) -> glm::vec3 {
+                    double e[3] = {rr.x, rr.y, rr.z};
+                    for (int a = 0; a < 3; a++)
+                    {
+                        for (size_t c = 0; c < axisCurves[a].size(); c++)
+                        {
+                            MFnAnimCurve animCurve(axisCurves[a][c]);
+                            e[a] = animCurve.evaluate(MTime(sec, MTime::kSeconds));
+                        }
+                    }
+                    return glm::vec3(e[0], e[1], e[2]);
+                };
 
+                // Maya interpolates Euler angles but glTF interpolates
+                // quaternions, so a key interval covering 180 degrees or more
+                // (including full >=360 degree turns) cannot be reproduced by
+                // its two end quaternions alone. Subdivide such intervals
+                // until each linear segment covers at most 45 degrees.
+                {
+                    const double maxStepRad = M_PI / 4.0;
+                    const double minDt = 1.0 / 240.0;
+                    struct Span
+                    {
+                        double t0, t1;
+                        glm::vec3 e0, e1;
+                        int depth;
+                    };
+                    std::vector<Span> spans;
+                    for (size_t k = 1; k < rotationKeys.size(); k++)
+                    {
+                        Span s = {rotationKeys[k - 1], rotationKeys[k], evalEuler(rotationKeys[k - 1]), evalEuler(rotationKeys[k]), 16};
+                        spans.push_back(s);
+                    }
+                    while (!spans.empty())
+                    {
+                        Span s = spans.back();
+                        spans.pop_back();
+                        if (s.depth <= 0 || (s.t1 - s.t0) <= minDt)
+                        {
+                            continue;
+                        }
+                        double d = fabs(s.e1.x - s.e0.x) + fabs(s.e1.y - s.e0.y) + fabs(s.e1.z - s.e0.z);
+                        if (d <= maxStepRad)
+                        {
+                            continue;
+                        }
+                        double tm = 0.5 * (s.t0 + s.t1);
+                        glm::vec3 em = evalEuler(tm);
+                        rotationKeys.push_back(tm);
+                        Span s0 = {s.t0, tm, s.e0, em, s.depth - 1};
+                        Span s1 = {tm, s.t1, em, s.e1, s.depth - 1};
+                        spans.push_back(s0);
+                        spans.push_back(s1);
+                    }
+                    std::sort(rotationKeys.begin(), rotationKeys.end());
+                    rotationKeys.erase(std::unique(rotationKeys.begin(), rotationKeys.end()), rotationKeys.end());
+                }
+
+                std::vector<glm::quat> values2(rotationKeys.size());
                 for (size_t k = 0; k < values2.size(); k++)
                 {
-                    double trot[3] = {values[k].x, values[k].y, values[k].z};
+                    glm::vec3 e = evalEuler(rotationKeys[k]);
+                    double trot[3] = {e.x, e.y, e.z};
                     MTransformationMatrix transform;
                     transform.setRotation(trot, fnTransform.rotationOrder());
                     MQuaternion mR = transform.rotation();
                     MQuaternion q = mOR * mR * mJO;
                     values2[k] = glm::quat(q.w, q.x, q.y, q.z); //wxyz
-#ifndef NDEBUG
-                    angle2[k] = ToDegree(2.0 * acos(q.w));
-#endif
+                }
+                // keep successive quaternion keys on the same hemisphere so
+                // viewers slerp the short way between them
+                for (size_t k = 1; k < values2.size(); k++)
+                {
+                    const glm::quat& p = values2[k - 1];
+                    glm::quat& c = values2[k];
+                    if (p.w * c.w + p.x * c.x + p.y * c.y + p.z * c.z < 0.0f)
+                    {
+                        c = glm::quat(-c.w, -c.x, -c.y, -c.z);
+                    }
                 }
 
                 std::shared_ptr<kml::AnimationPath> apath(new kml::AnimationPath());
@@ -4169,6 +4341,26 @@ static std::vector<std::shared_ptr<kml::Animation> > GetAnimations(const std::sh
     return animations;
 }
 
+static std::vector<std::shared_ptr<kml::Animation> > MergeSingleAnimation(std::vector<std::shared_ptr<kml::Animation> >& animations)
+{
+    std::vector<std::shared_ptr<kml::Animation> > tanims;
+    if(animations.size() > 0)
+    {
+        std::shared_ptr<kml::Animation> tanim(new kml::Animation());
+        tanim->SetName(animations[0]->GetName());
+        for(size_t i = 0; i < animations.size(); i++)
+        {
+            const std::vector<std::shared_ptr<kml::AnimationInstruction> >& insts = animations[i]->GetInstructions();
+            for(size_t j = 0; j < insts.size(); j++)
+            {
+                tanim->AddInstruction(insts[j]);
+            }
+        }
+        tanims.push_back(tanim);
+    }
+    return tanims;
+}
+
 static void GetSkinnedMeshNodes(std::vector<std::shared_ptr<kml::Node> >& nodes, const std::shared_ptr<kml::Node>& node)
 {
     if (node->GetTransform().get() && node->GetMesh().get() && node->GetMesh()->GetSkinWeight().get())
@@ -4406,6 +4598,7 @@ MStatus glTFExporter::exportProcess(const MString& fname, const std::vector<MDag
     bool vrm = opts->GetInt("vrm_export") > 0;
     bool output_invisible_nodes = opts->GetInt("output_invisible_nodes") > 0;
     bool output_animations = opts->GetInt("output_animations") > 0;
+    bool output_single_animation = opts->GetInt("output_single_animation") > 0;
     bool freeze_skinned_mesh_transform = opts->GetInt("freeze_skinned_mesh_transform") > 0;
 
     std::string generator_name = opts->GetString("generator_name");
@@ -4584,6 +4777,11 @@ MStatus glTFExporter::exportProcess(const MString& fname, const std::vector<MDag
         if (output_animations)
         {
             std::vector<std::shared_ptr<kml::Animation> > animations = GetAnimations(node);
+            if(output_single_animation)
+            {
+                animations = MergeSingleAnimation(animations);
+            }
+
             for (size_t i = 0; i < animations.size(); i++)
             {
                 node->AddAnimation(animations[i]);

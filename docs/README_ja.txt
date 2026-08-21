@@ -6,17 +6,17 @@
 
 　A: MAYAのシステムフォルダにインストール
 
-　　C:\Program Files\Autodesk\Maya2018\bin\plug-ins　　に　glTFExporter.mll 　　　　　　をコピー
-　　C:\Program Files\Autodesk\Maya2018\scripts\others　に　glTFExporterOptions.mel　　　をコピー
-　　C:\Program Files\Autodesk\Maya2018\scripts\others　に　glTFExporterOptions.res.mel　をコピー
+　　C:\Program Files\Autodesk\Maya2024\bin\plug-ins　　に　glTFExporter.mll 　　　　　　をコピー
+　　C:\Program Files\Autodesk\Maya2024\scripts\others　に　glTFExporterOptions.mel　　　をコピー
+　　C:\Program Files\Autodesk\Maya2024\scripts\others　に　glTFExporterOptions.res.mel　をコピー
 
 　B: ユーザーフォルダにインストール
 
-　　C:\Users\[ユーザー名]\Documents\maya\2018\ にplug-ins フォルダを作成
-　　C:\Users\[ユーザー名]\Documents\maya\2018\plug-ins に glTFExporter.mll　 　　　　　をコピー
-　　C:\Users\[ユーザー名]\Documents\maya\2018\ja_JP\scripts　に　glTFExporterOptions.mel　　　をコピー
-　　C:\Users\[ユーザー名]\Documents\maya\2018\ja_JP\scripts　に　glTFExporterOptions.res.mel　をコピー
-　　Mayaを起動し、putevn "MAYA_PLUG_IN_PATH" "C:\Users\[ユーザー名]\Documents\maya\2018\plug-ins" コマンドを実行する
+　　C:\Users\[ユーザー名]\Documents\maya\2024\ にplug-ins フォルダを作成
+　　C:\Users\[ユーザー名]\Documents\maya\2024\plug-ins に glTFExporter.mll　 　　　　　をコピー
+　　C:\Users\[ユーザー名]\Documents\maya\2024\ja_JP\scripts　に　glTFExporterOptions.mel　　　をコピー
+　　C:\Users\[ユーザー名]\Documents\maya\2024\ja_JP\scripts　に　glTFExporterOptions.res.mel　をコピー
+　　Mayaを起動し、putevn "MAYA_PLUG_IN_PATH" "C:\Users\[ユーザー名]\Documents\maya\2024\plug-ins" コマンドを実行する
 
 
 　以上の設定を行い、ウインドウ→設定／プレファレンス→プラグインマネージャ　で、　自動ロード設定がONになっていると
