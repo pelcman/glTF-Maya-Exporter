@@ -2085,7 +2085,18 @@ static bool storeAiStandardSurfaceShader(std::shared_ptr<kml::Material> mat, con
         mat->SetTexture("BaseColor", baseColorTex);
     }
     mat->SetFloat("metallicFactor", metallic);
-    mat->SetFloat("roughnessFactor", specularRoughness);
+    // glTF has a single roughness while Arnold's specular roughness only
+    // takes effect when a specular lobe exists (specular weight > 0 or
+    // metalness > 0, metalness keeps the lobe even at weight 0). Fade to
+    // fully rough as the lobe disappears so that "no specular" survives
+    // the conversion. Arnold's diffuse roughness (Oren-Nayar) has no glTF
+    // counterpart (glTF diffuse is always Lambertian) and is not used.
+    {
+        float specularLobe = std::max(metallic, specularWeight);
+        specularLobe = std::min(std::max(specularLobe, 0.0f), 1.0f);
+        const float roughnessFactor = specularRoughness * specularLobe + (1.0f - specularLobe);
+        mat->SetFloat("roughnessFactor", roughnessFactor);
+    }
 
     mat->SetFloat("Emission.R", emissionCol.r * emissionWeight);
     mat->SetFloat("Emission.G", emissionCol.g * emissionWeight);

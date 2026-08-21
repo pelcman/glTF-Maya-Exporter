@@ -140,6 +140,19 @@ cmds.file(r'<tmp>/out.glb', force=True, options='', type='GLB Export', pr=True, 
       クォータニオン符号を揃える半球補正を実装(glTFExporter.cpp の
       回転アニメーション出力部)。小さい回転ではキー数は増えない。
 
+- [x] (2026-08-21) **オブジェクトごとの Double Sided 設定が glTF に出力されない問題**。
+      Maya はメッシュシェイプ単位、glTF はマテリアル単位のため、「そのマテリアルを
+      使うメッシュのどれかが Double Sided なら material.doubleSided = true」(OR)で
+      マッピング。JSON 出力側は KashikaNativeLib(フォーク)の変更。
+- [x] (2026-08-21) **aiStandardSurface の roughness がパラメータの組み合わせで
+      正しく出力されない問題**。従来は specularRoughness を無条件出力していたが、
+      スペキュラローブの存在量 `clamp(max(metalness, specularWeight))` で
+      `mix(1.0, specularRoughness, lobe)` にブレンドする式に変更。
+      Metalness=0 かつ SpecularWeight=0 → 1.0(ハイライト消滅)、Metalness=1 →
+      specularRoughness 有効、既定値(SpecularWeight=1)は従来と同一出力。
+      Diffuse Roughness は glTF のディフューズが Lambert 固定のため表現不可
+      (LTE 拡張には生値が入っている)。
+
 ### 今後の課題(必要になったら)
 - [ ] 非推奨 API の置き換え(上記 4 種、`MAYA_API_VERSION >= 20190000` ガード付きで)
 - [ ] macOS / Linux でのビルド検証
