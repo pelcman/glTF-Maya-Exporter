@@ -36,7 +36,7 @@ src/
 │  │                         リサイズ(Windows: GDI+、その他: stb)
 │  └─ externals/             draco 1.3.3 / glm / picojson(いずれも submodule)
 ├─ cppexporter/             … Maya 非依存の C++ インターフェース(既定 OFF)
-scripts/                    … エクスポートオプション UI(MEL)。registerFileTranslator の
+releases/scripts/           … エクスポートオプション UI(MEL)。registerFileTranslator の
                                optionScript として読み込まれる
 docs/                       … 配布用 README(ja/en)
 ```
@@ -62,7 +62,9 @@ $cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE
 ```
 
 成果物: `build{ver}/Release/glTFExporter.mll`, `vrmExporter.mll`
-インストール: `.mll` を `plug-ins/`、`scripts/*.mel` を `scripts/` へ配置
+インストール: `.mll` を `plug-ins/`、`releases/scripts/*.mel` を `scripts/` へ配置。
+配布用バイナリは `releases/Maya{ver}/` に格納(リリース時に全バージョン分を
+再ビルドして更新すること)
 (`MAYA_MODULE_PATH` 併用可)。
 
 ### 動作確認(mayapy)

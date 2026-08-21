@@ -2,10 +2,20 @@
 
 ## Maya glTF 2.0 Exporter
 
-The prebuild binary is here: https://kashika.co.jp/product/gltfexporter/
+Prebuilt binaries for Maya 2022-2027 are in the [releases/](releases/)
+folder of this repository (see "How to Install" below).
 
 ## Version
 1.6.0
+
+### Changes in 1.6.0 (this fork)
+
+- Support Maya 2017 through 2027 (CMake + VS2022 based build)
+- Fix rotation animations spanning 180+ degrees / multiple turns
+  (adaptive resampling; no need to bake animations before export)
+- Map Maya's per-object Double Sided flag to glTF `material.doubleSided`
+- Derive `roughnessFactor` from the aiStandardSurface specular lobe
+  (metalness / specular weight combinations now export correctly)
 
 ## Introduction
 This is the glTF 2.0 exporter for AUTODESK MAYA (
@@ -53,6 +63,31 @@ macOS and Linux code paths are kept intact but are not currently verified.
 - [x] SkinMesh animation
 
 - [x] Blend shape animation
+
+## How to Install (prebuilt binaries)
+
+The `releases/` folder contains ready-to-use binaries:
+
+```
+releases/
+├─ scripts/        Export option UIs (copy for every Maya version)
+├─ Maya2022/       glTFExporter.mll / vrmExporter.mll for Maya 2022
+├─ ...
+└─ Maya2027/       glTFExporter.mll / vrmExporter.mll for Maya 2027
+```
+
+- 1: Copy `releases/Maya{version}/*.mll` into
+  `C:\Users\[account]\Documents\maya\[version]\plug-ins`
+  (create the folder if it does not exist)
+
+- 2: Copy `releases/scripts/*.mel` into
+  `C:\Users\[account]\Documents\maya\[version]\scripts`
+  (`ja_JP\scripts` / `en_US\scripts` also work)
+
+- 3: Start Maya and enable the plug-ins in
+  Windows > Settings/Preferences > Plug-in Manager
+
+See `docs/README_ja.txt` / `docs/README_en.txt` for details.
 
 ## How to Build
 
