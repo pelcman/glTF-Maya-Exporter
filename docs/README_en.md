@@ -13,31 +13,29 @@ glTF 2.0 / VRM exporter for Maya (v1.6.0, Maya 2017–2027)
    Windows > Settings/Preferences > Plug-in Manager
 4. Use File > Export All with file type GLTF/GLB/VRM Export
 
-## Specifications
+## Supported
 
 - Output: glTF 2.0 (`.gltf` + `.bin` / `.glb`), VRM
-- Meshes, transforms/skeletons, skin weights, blend shapes, and keyframe
-  animations (rotations beyond 360° export correctly via adaptive resampling)
+- Meshes
+- Transforms / skeletons
+- Skin weights
+- Blend shapes
+- Keyframe animation (translate / rotate / scale / blend shapes)
 - Materials: Lambert / Phong / PhongE, aiStandardSurface, aiStandardHair,
   StingrayPBS, SurfaceShader (unlit)
-- Per-object Double Sided flag mapped to the material `doubleSided` flag
-- Draco compression, texture format conversion (JPEG / PNG)
+- Textures: base color / normal / emissive
+- Per-object Double Sided flag (exported as the material doubleSided flag)
+- Draco compression
+- Texture format conversion (JPEG / PNG)
 
-## Limitations
+## Not supported
 
-- Diffuse roughness cannot be exported (glTF diffuse is Lambertian)
-- **Metallic / roughness / AO textures are not exported.**
-  Even when a texture is connected to these inputs (StingrayPBS maps,
-  a texture on aiStandardSurface metalness, etc.), the exported glTF
-  applies the material's single numeric value uniformly to the whole
-  model - per-area variation such as "only this part is metallic or
-  rough" is lost, so pick a representative value where needed.
-  Base color / normal / emissive textures are exported.
-  (glTF only accepts metallic and roughness packed together into one
-  metallicRoughnessTexture; merging separate images is not implemented.)
-- Verified on Windows only (macOS / Linux code paths are kept but untested)
-- Maya 2017–2021: source compatibility only; binaries require the matching
-  older Visual Studio toolchain
+- Metallic / roughness / AO textures. Even when a texture is connected,
+  the material's numeric value is exported uniformly for the whole model
+- Diffuse roughness
+- macOS / Linux verification (code paths are kept)
+- Prebuilt binaries for Maya 2017–2021 (source compatibility only;
+  building requires the matching older Visual Studio)
 
 ## How to Build
 
@@ -47,8 +45,8 @@ vc2022setup.bat 2024        (pass the target Maya version)
 cmake --build build2024 --config Release
 ```
 
-## Provided As Is
+## Terms
 
-This software is provided **AS IS**, without warranty of any kind, express
-or implied. The authors and distributors accept no liability for any damage
+This software is provided as is, without warranty of any kind, express or
+implied. The authors and distributors accept no liability for any damage
 arising from its use. License: MIT License
