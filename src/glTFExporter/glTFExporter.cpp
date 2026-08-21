@@ -3856,19 +3856,9 @@ static void GetAnimationsFromTransform(std::vector<std::shared_ptr<kml::Animatio
                 std::sort(rotationKeys.begin(), rotationKeys.end());
                 rotationKeys.erase(std::unique(rotationKeys.begin(), rotationKeys.end()), rotationKeys.end());
 
-                std::vector<glm::vec3> values(rotationKeys.size());
-                for (size_t j = 0; j < rotationKeys.size(); j++)
-                {
-                    values[j] = glm::vec3(rr.x, rr.y, rr.z);
-                }
-#ifndef NDEBUG
-                std::vector<glm::vec3> angles(rotationKeys.size());
-                for (size_t j = 0; j < rotationKeys.size(); j++)
-                {
-                    angles[j] = glm::vec3(ToDegree(rr.x), ToDegree(rr.y), ToDegree(rr.z));
-                }
-#endif
-
+                // group the anim curves per axis so the rotation can be
+                // evaluated at arbitrary times, not only at authored keys
+                std::vector<MObject> axisCurves[3];
                 for (int j = 0; j < rotationPlugs.size(); j++)
                 {
                     MPlug plug = rotationPlugs[j];
@@ -3880,6 +3870,23 @@ static void GetAnimationsFromTransform(std::vector<std::shared_ptr<kml::Animatio
 
                     std::string name = plug.name().asChar();
                     std::string typeName = name.substr(name.find(".") + 1);
+                    int axis = -1;
+                    if (typeName == "rotateX")
+                    {
+                        axis = 0;
+                    }
+                    else if (typeName == "rotateY")
+                    {
+                        axis = 1;
+                    }
+                    else if (typeName == "rotateZ")
+                    {
+                        axis = 2;
+                    }
+                    if (axis < 0)
+                    {
+                        continue;
+                    }
 
                     unsigned int numCurves = animation.length();
                     for (unsigned int c = 0; c < numCurves; c++)
@@ -3887,61 +3894,89 @@ static void GetAnimationsFromTransform(std::vector<std::shared_ptr<kml::Animatio
                         MObject animCurveNode = animation[c];
                         if (!animCurveNode.hasFn(MFn::kAnimCurve))
                             continue;
-                        MFnAnimCurve animCurve(animCurveNode);
-
-                        for (size_t k = 0; k < rotationKeys.size(); k++)
-                        {
-                            double second = rotationKeys[k];
-                            double value = animCurve.evaluate(MTime(second, MTime::kSeconds));
-
-#ifndef NDEBUG
-                            double angle = ToDegree(value);
-                            if (typeName == "rotateX")
-                            {
-                                angles[k].x = angle;
-                            }
-                            else if (typeName == "rotateY")
-                            {
-                                angles[k].y = angle;
-                            }
-                            else if (typeName == "rotateZ")
-                            {
-                                angles[k].z = angle;
-                            }
-#endif
-
-                            if (typeName == "rotateX")
-                            {
-                                values[k].x = value;
-                            }
-                            else if (typeName == "rotateY")
-                            {
-                                values[k].y = value;
-                            }
-                            else if (typeName == "rotateZ")
-                            {
-                                values[k].z = value;
-                            }
-                        }
+                        axisCurves[axis].push_back(animCurveNode);
                     }
                 }
 
-                std::vector<glm::quat> values2(rotationKeys.size());
-#ifndef NDEBUG
-                std::vector<double> angle2(rotationKeys.size());
-#endif
+                auto evalEuler = [&](double sec) -> glm::vec3 {
+                    double e[3] = {rr.x, rr.y, rr.z};
+                    for (int a = 0; a < 3; a++)
+                    {
+                        for (size_t c = 0; c < axisCurves[a].size(); c++)
+                        {
+                            MFnAnimCurve animCurve(axisCurves[a][c]);
+                            e[a] = animCurve.evaluate(MTime(sec, MTime::kSeconds));
+                        }
+                    }
+                    return glm::vec3(e[0], e[1], e[2]);
+                };
 
+                // Maya interpolates Euler angles but glTF interpolates
+                // quaternions, so a key interval covering 180 degrees or more
+                // (including full >=360 degree turns) cannot be reproduced by
+                // its two end quaternions alone. Subdivide such intervals
+                // until each linear segment covers at most 45 degrees.
+                {
+                    const double maxStepRad = M_PI / 4.0;
+                    const double minDt = 1.0 / 240.0;
+                    struct Span
+                    {
+                        double t0, t1;
+                        glm::vec3 e0, e1;
+                        int depth;
+                    };
+                    std::vector<Span> spans;
+                    for (size_t k = 1; k < rotationKeys.size(); k++)
+                    {
+                        Span s = {rotationKeys[k - 1], rotationKeys[k], evalEuler(rotationKeys[k - 1]), evalEuler(rotationKeys[k]), 16};
+                        spans.push_back(s);
+                    }
+                    while (!spans.empty())
+                    {
+                        Span s = spans.back();
+                        spans.pop_back();
+                        if (s.depth <= 0 || (s.t1 - s.t0) <= minDt)
+                        {
+                            continue;
+                        }
+                        double d = fabs(s.e1.x - s.e0.x) + fabs(s.e1.y - s.e0.y) + fabs(s.e1.z - s.e0.z);
+                        if (d <= maxStepRad)
+                        {
+                            continue;
+                        }
+                        double tm = 0.5 * (s.t0 + s.t1);
+                        glm::vec3 em = evalEuler(tm);
+                        rotationKeys.push_back(tm);
+                        Span s0 = {s.t0, tm, s.e0, em, s.depth - 1};
+                        Span s1 = {tm, s.t1, em, s.e1, s.depth - 1};
+                        spans.push_back(s0);
+                        spans.push_back(s1);
+                    }
+                    std::sort(rotationKeys.begin(), rotationKeys.end());
+                    rotationKeys.erase(std::unique(rotationKeys.begin(), rotationKeys.end()), rotationKeys.end());
+                }
+
+                std::vector<glm::quat> values2(rotationKeys.size());
                 for (size_t k = 0; k < values2.size(); k++)
                 {
-                    double trot[3] = {values[k].x, values[k].y, values[k].z};
+                    glm::vec3 e = evalEuler(rotationKeys[k]);
+                    double trot[3] = {e.x, e.y, e.z};
                     MTransformationMatrix transform;
                     transform.setRotation(trot, fnTransform.rotationOrder());
                     MQuaternion mR = transform.rotation();
                     MQuaternion q = mOR * mR * mJO;
                     values2[k] = glm::quat(q.w, q.x, q.y, q.z); //wxyz
-#ifndef NDEBUG
-                    angle2[k] = ToDegree(2.0 * acos(q.w));
-#endif
+                }
+                // keep successive quaternion keys on the same hemisphere so
+                // viewers slerp the short way between them
+                for (size_t k = 1; k < values2.size(); k++)
+                {
+                    const glm::quat& p = values2[k - 1];
+                    glm::quat& c = values2[k];
+                    if (p.w * c.w + p.x * c.x + p.y * c.y + p.z * c.z < 0.0f)
+                    {
+                        c = glm::quat(-c.w, -c.x, -c.y, -c.z);
+                    }
                 }
 
                 std::shared_ptr<kml::AnimationPath> apath(new kml::AnimationPath());
