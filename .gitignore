@@ -334,3 +334,6 @@ ASALocalRun/
 build/
 maya
 .vscode/
+
+# CMake build directories (per-Maya-version, e.g. build2024/)
+build*/
