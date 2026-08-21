@@ -158,7 +158,13 @@ cmds.file(r'<tmp>/out.glb', force=True, options='', type='GLB Export', pr=True, 
 ### 今後の課題(必要になったら)
 - [ ] 非推奨 API の置き換え(上記 4 種、`MAYA_API_VERSION >= 20190000` ガード付きで)
 - [ ] macOS / Linux でのビルド検証
-- [ ] StingrayPBS マテリアル対応(オリジナルからの積み残し)
+- [x] StingrayPBS マテリアル対応(2026-08-21 実装)。base_color/metallic/
+      roughness/emissive のスカラーと、カラー・ノーマル・エミッシブの各マップに
+      対応。metallic/roughness マップは glTF 側が 1 枚への合成を要求するため
+      未対応(スカラー値を出力)。検出は従来の `graph=="stingray"` 比較が現行
+      Maya では機能しないため、ノードタイプ名 `StingrayPBS` で行う。
+      mayapy でのテスト時は `cmds.shaderfx(sfxnode=..., initShaderAttributes=True)`
+      で動的属性の初期化が必要(GUI では自動)。
 
 ## Git 運用
 
