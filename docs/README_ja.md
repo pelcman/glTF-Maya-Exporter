@@ -24,8 +24,16 @@ Maya 用 glTF 2.0 / VRM エクスポータ(v1.6.0 / Maya 2017–2027 対応)
 ## 制限
 
 - Diffuse Roughness は glTF 仕様(Lambert 拡散)のため出力不可
-- StingrayPBS の metallic / roughness / AO マップは未対応(スカラー値を出力)
-- metalness 等がテクスチャ駆動の場合もスカラー値を出力
+- **metallic / roughness / AO のテクスチャは出力されません。**
+  これらにテクスチャ画像を接続していても(StingrayPBS のマップ、
+  aiStandardSurface の metalness へのテクスチャ接続など)、glTF には
+  マテリアルに設定された数値 1 つがモデル全体へ一律に適用されます。
+  「一部分だけ金属にする / ザラつかせる」といった場所ごとの表現は
+  失われるため、必要な場合は数値を代表値に調整してください。
+  ベースカラー / ノーマル / エミッシブのテクスチャは出力されます。
+  (glTF は metallic と roughness を 1 枚の画像に合成した
+  metallicRoughnessTexture しか受け付けず、個別画像からの自動合成が
+  未実装のため)
 - 動作検証は Windows のみ(macOS / Linux はコード維持のみ)
 - Maya 2017–2021 はソース互換のみ(バイナリは対応する旧 Visual Studio でのビルドが必要)
 
