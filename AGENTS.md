@@ -32,8 +32,7 @@ $cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE
 & "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" スクリプト.py
 ```
 
-- 検証対象 Maya: 2022 / 2023 / 2024(インストール先 `C:\Program Files\Autodesk\Maya{ver}`)。
-  フェーズ 2 では 2025 / 2026 / 2027 も同様に。
+- 検証対象 Maya: 2022〜2027(インストール先 `C:\Program Files\Autodesk\Maya{ver}`)。
 - 2017〜2021 は SDK がローカルに無い。これらへの影響はコードレビュー
   (`MAYA_API_VERSION` ガードの維持)で担保する。
 - ビルド成果物(`build*` ディレクトリ)はコミットしない(.gitignore 済みか確認)。
@@ -74,3 +73,6 @@ $cmake = "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE
   `MItGeometry::component`(→ currentItem)。すべて src/glTFExporter/glTFExporter.cpp。
 - (2026-08-21) mayapy スモークテストの GLTF 出力は `<名前>/<名前>.gltf` の
   ディレクトリ構造になる(GLB は単一ファイル)。
+- (2026-08-21) Maya 2025/2026/2027 も無修正でビルド+スモークテスト合格。
+  2027 SDK でも上記の非推奨 API は削除されていない(コンパイルは /W1 のため
+  C4996 が出ないだけの場合もある。棚卸しの際は /W3 で確認すること)。
