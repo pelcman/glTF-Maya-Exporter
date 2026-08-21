@@ -9,33 +9,31 @@ Maya 用 glTF 2.0 / VRM エクスポータ(v1.6.0 / Maya 2017–2027 対応)
 2. `releases/scripts/` の `*.mel` を
    `C:\Users\[ユーザー名]\Documents\maya\[バージョン]\scripts` へコピー
 3. Maya を起動し、ウインドウ → 設定/プリファレンス → プラグインマネージャ でロード
-4. 「ファイル → すべて書き出し」でファイルの種類に GLTF/GLB/VRM Export を選択
+4. ファイル → すべて書き出し で、ファイルの種類に GLTF/GLB/VRM Export を選択
 
-## 仕様
+## 対応機能
 
 - 出力形式: glTF 2.0(`.gltf` + `.bin` / `.glb`)、VRM
-- メッシュ、トランスフォーム/スケルトン、スキンウェイト、ブレンドシェイプ、
-  キーフレームアニメーション(回転は 360° 超も適応リサンプリングで正しく出力)
+- メッシュ
+- トランスフォーム / スケルトン
+- スキンウェイト
+- ブレンドシェイプ
+- キーフレームアニメーション(移動 / 回転 / スケール / ブレンドシェイプ)
 - マテリアル: Lambert / Phong / PhongE、aiStandardSurface、aiStandardHair、
   StingrayPBS、SurfaceShader(Unlit)
-- オブジェクトの Double Sided 設定をマテリアルの `doubleSided` に反映
-- Draco 圧縮、テクスチャ形式変換(JPEG / PNG)
+- テクスチャ: ベースカラー / ノーマル / エミッシブ
+- オブジェクトの Double Sided 設定(マテリアルの doubleSided として出力)
+- Draco 圧縮
+- テクスチャ形式変換(JPEG / PNG)
 
-## 制限
+## 非対応
 
-- Diffuse Roughness は glTF 仕様(Lambert 拡散)のため出力不可
-- **metallic / roughness / AO のテクスチャは出力されません。**
-  これらにテクスチャ画像を接続していても(StingrayPBS のマップ、
-  aiStandardSurface の metalness へのテクスチャ接続など)、glTF には
-  マテリアルに設定された数値 1 つがモデル全体へ一律に適用されます。
-  「一部分だけ金属にする / ザラつかせる」といった場所ごとの表現は
-  失われるため、必要な場合は数値を代表値に調整してください。
-  ベースカラー / ノーマル / エミッシブのテクスチャは出力されます。
-  (glTF は metallic と roughness を 1 枚の画像に合成した
-  metallicRoughnessTexture しか受け付けず、個別画像からの自動合成が
-  未実装のため)
-- 動作検証は Windows のみ(macOS / Linux はコード維持のみ)
-- Maya 2017–2021 はソース互換のみ(バイナリは対応する旧 Visual Studio でのビルドが必要)
+- metallic / roughness / AO のテクスチャ。テクスチャを接続していても、
+  マテリアルの数値がモデル全体に一律で出力される
+- Diffuse Roughness
+- macOS / Linux での動作検証(コードは維持)
+- Maya 2017–2021 用のビルド済みバイナリ(ソース互換のみ。ビルドには
+  対応する旧 Visual Studio が必要)
 
 ## ビルド方法
 
@@ -45,8 +43,8 @@ vc2022setup.bat 2024        (対象 Maya バージョンを指定)
 cmake --build build2024 --config Release
 ```
 
-## 提供条件(現状有姿)
+## 提供条件
 
-本ソフトウェアは**現状有姿(AS IS)**で提供されます。明示・黙示を問わず
-いかなる保証も行わず、利用により生じた損害について作者および配布者は
-一切の責任を負いません。ライセンス: MIT License
+本ソフトウェアは現状有姿で提供され、明示・黙示を問わずいかなる保証も
+ありません。利用により生じた損害について作者および配布者は責任を負いません。
+ライセンス: MIT License
