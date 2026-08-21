@@ -16,6 +16,7 @@ folder of this repository (see "How to Install" below).
 - Map Maya's per-object Double Sided flag to glTF `material.doubleSided`
 - Derive `roughnessFactor` from the aiStandardSurface specular lobe
   (metalness / specular weight combinations now export correctly)
+- Support StingrayPBS materials (previously an unimplemented stub)
 
 ## Introduction
 This is the glTF 2.0 exporter for AUTODESK MAYA (
@@ -48,7 +49,7 @@ macOS and Linux code paths are kept intact but are not currently verified.
 
 - [x] Material aiStandardHair (USE: GLTF_MAYA_EXPORTER_SUPPORT_LTE_PBR_MATERIAL is ON)
 
-- [ ] Material StingrayPBS
+- [x] Material StingrayPBS (base color/normal/emissive maps; metallic and roughness as scalar values)
 
 - [x] Transform/Skeleton
 

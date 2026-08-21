@@ -1782,6 +1782,13 @@ static bool getNormalAttrib(const MFnDependencyNode& node, MString& normaltexpat
 
 static bool isStingrayPBS(const MFnDependencyNode& materialDependencyNode)
 {
+    // the node type is the reliable marker; on current Maya versions the
+    // "graph" attribute holds the whole serialized ShaderFX graph, not
+    // the string "stingray" the legacy check below expects
+    if (materialDependencyNode.typeName() == "StingrayPBS")
+    {
+        return true;
+    }
     MString graphAttribute("graph");
     if (materialDependencyNode.hasAttribute(graphAttribute))
     {
@@ -1796,10 +1803,120 @@ static bool isStingrayPBS(const MFnDependencyNode& materialDependencyNode)
         return false;
     }
 }
-static bool storeStingrayPBS(std::shared_ptr<kml::Material> mat, const MFnDependencyNode& materialDependencyNode)
+static float readFloatPlug(const MFnDependencyNode& node, const char* name, float def)
 {
-    // TODO
-    return false;
+    MStatus status;
+    MPlug plug = node.findPlug(name, &status);
+    if (status != MS::kSuccess)
+    {
+        return def;
+    }
+    float v = def;
+    plug.getValue(v);
+    return v;
+}
+
+static bool readBoolPlug(const MFnDependencyNode& node, const char* name, bool def)
+{
+    MStatus status;
+    MPlug plug = node.findPlug(name, &status);
+    if (status != MS::kSuccess)
+    {
+        return def;
+    }
+    bool v = def;
+    plug.getValue(v);
+    return v;
+}
+
+static MColor readColorPlug(const MFnDependencyNode& node, const char* name, const MColor& def)
+{
+    MStatus status;
+    MPlug plug = node.findPlug(name, &status);
+    if (status != MS::kSuccess || plug.numChildren() < 3)
+    {
+        return def;
+    }
+    MColor c = def;
+    plug.child(0).getValue(c.r);
+    plug.child(1).getValue(c.g);
+    plug.child(2).getValue(c.b);
+    return c;
+}
+
+static bool storeStingrayPBS(std::shared_ptr<kml::Material> mat, const MFnDependencyNode& node)
+{
+    // StingrayPBS (standard graph) maps almost 1:1 onto the glTF
+    // metallic-roughness model. The separate metallic/roughness maps
+    // cannot be exported (glTF wants them packed into one texture), so
+    // the scalar values are used for metallicFactor/roughnessFactor.
+    std::string shadername = node.name().asChar();
+    mat->SetName(shadername);
+
+    // base color
+    MColor baseCol = readColorPlug(node, "base_color", MColor(1.0f, 1.0f, 1.0f, 1.0f));
+    std::shared_ptr<kml::Texture> baseColTex(nullptr);
+    {
+        MColor dummy;
+        getTextureAndColor(node, MString("TEX_color_map"), baseColTex, dummy);
+    }
+    if (readBoolPlug(node, "use_color_map", false) && baseColTex)
+    {
+        mat->SetTexture("BaseColor", baseColTex);
+        mat->SetFloat("BaseColor.R", 1.0f);
+        mat->SetFloat("BaseColor.G", 1.0f);
+        mat->SetFloat("BaseColor.B", 1.0f);
+    }
+    else
+    {
+        mat->SetFloat("BaseColor.R", baseCol.r);
+        mat->SetFloat("BaseColor.G", baseCol.g);
+        mat->SetFloat("BaseColor.B", baseCol.b);
+    }
+    mat->SetFloat("BaseColor.A", 1.0f); // StingrayPBS standard has no opacity
+
+    // metallic / roughness (scalar only, see above)
+    mat->SetFloat("metallicFactor", readFloatPlug(node, "metallic", 0.0f));
+    mat->SetFloat("roughnessFactor", readFloatPlug(node, "roughness", 1.0f));
+
+    // normal map
+    if (readBoolPlug(node, "use_normal_map", false))
+    {
+        MColor dummy;
+        std::shared_ptr<kml::Texture> normalTex(nullptr);
+        getTextureAndColor(node, MString("TEX_normal_map"), normalTex, dummy);
+        if (normalTex)
+        {
+            mat->SetTexture("Normal", normalTex);
+        }
+    }
+
+    // emissive
+    {
+        MColor emissiveCol = readColorPlug(node, "emissive", MColor(0.0f, 0.0f, 0.0f, 1.0f));
+        float intensity = readFloatPlug(node, "emissive_intensity", 1.0f);
+        intensity = std::min(std::max(intensity, 0.0f), 1.0f); // emissiveFactor must be [0,1]
+        std::shared_ptr<kml::Texture> emissiveTex(nullptr);
+        {
+            MColor dummy;
+            getTextureAndColor(node, MString("TEX_emissive_map"), emissiveTex, dummy);
+        }
+        if (readBoolPlug(node, "use_emissive_map", false) && emissiveTex)
+        {
+            mat->SetTexture("Emission", emissiveTex);
+            mat->SetFloat("Emission.R", intensity);
+            mat->SetFloat("Emission.G", intensity);
+            mat->SetFloat("Emission.B", intensity);
+        }
+        else
+        {
+            mat->SetFloat("Emission.R", emissiveCol.r * intensity);
+            mat->SetFloat("Emission.G", emissiveCol.g * intensity);
+            mat->SetFloat("Emission.B", emissiveCol.b * intensity);
+        }
+    }
+
+    return true;
 }
 
 static bool isAiStandardSurfaceShader(const MFnDependencyNode& materialDependencyNode)
