@@ -2,6 +2,8 @@
 
 ## Maya glTF 2.0 Exporter
 
+Documentation: [日本語 (README_ja.md)](docs/README_ja.md) / [English (README_en.md)](docs/README_en.md)
+
 Prebuilt binaries for Maya 2022-2027 are in the [releases/](releases/)
 folder of this repository (see "How to Install" below).
 
@@ -88,7 +90,7 @@ releases/
 - 3: Start Maya and enable the plug-ins in
   Windows > Settings/Preferences > Plug-in Manager
 
-See `docs/README_ja.txt` / `docs/README_en.txt` for details.
+See [docs/README_ja.md](docs/README_ja.md) / [docs/README_en.md](docs/README_en.md) for details.
 
 ## How to Build
 
