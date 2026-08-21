@@ -16,7 +16,12 @@ This repositry contains mel scripts and C++ source codes.
 
 ## Support Maya version
 
-We support MAYA2017 and MAYA2018 on Windows and macOS, now.
+We support MAYA2017 through MAYA2024 on Windows (build-verified with
+Maya 2022/2023/2024 + Visual Studio 2022; Maya 2017-2021 keep source
+compatibility via `MAYA_API_VERSION` guards but require their matching
+older toolchains for binary compatibility).
+
+macOS and Linux code paths are kept intact but are not currently verified.
 
 
 ## Support features
@@ -53,13 +58,18 @@ We support MAYA2017 and MAYA2018 on Windows and macOS, now.
 
 ### Generate project file by CMake
 
-- 1: Create build directory. `$mkdir build`
+- 1: Get submodules. `$git submodule update --init --recursive`
 
-- 2: Move Currenct directory `$cd build`
+- 2: Configure for your Maya version (Windows example, VS2022):
+  `$cmake -G "Visual Studio 17 2022" -A x64 -B build2024 -S . -DGLTF_MAYA_EXPORTER_MAYA_VERSION=2024`
+  (or run `vc2022setup.bat [MayaVersion]`)
 
-- 3: Create project `$cmake ..`
+- 3: Build it: `$cmake --build build2024 --config Release`
 
-- 4: Make it..  `$cmake --build .`
+- 4: Artifacts: `build2024/Release/glTFExporter.mll` and `vrmExporter.mll`
+
+If Maya is installed in a non-standard location, set
+`GLTF_MAYA_EXPORTER_MAYA_PATH` instead.
 
 ### Use Visual Studio (deprecated)
 
