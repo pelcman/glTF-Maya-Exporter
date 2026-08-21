@@ -2628,6 +2628,23 @@ static bool IsVisibleLeafNode(const std::shared_ptr<kml::Node>& node)
     }
 }
 
+static bool IsMeshDoubleSided(const MDagPath& dagPath)
+{
+    MStatus status;
+    MFnMesh fnMesh(dagPath, &status);
+    if (status != MS::kSuccess)
+    {
+        return false;
+    }
+    bool doubleSided = false;
+    MPlug plug = fnMesh.findPlug("doubleSided");
+    if (!plug.isNull())
+    {
+        plug.getValue(doubleSided);
+    }
+    return doubleSided;
+}
+
 static MStatus WriteGLTF(
     TexturePathManager& texManager,
     std::map<int, std::shared_ptr<kml::Material> >& materials,
@@ -2802,6 +2819,17 @@ static MStatus WriteGLTF(
 
                 node->AddMaterial(mat);
             }
+        }
+    }
+    // Maya's Double Sided flag lives on the mesh shape while glTF's
+    // doubleSided flag lives on the material, so mark a material double
+    // sided as soon as one mesh that uses it is double sided.
+    if (IsMeshDoubleSided(dagPath))
+    {
+        const auto& mats = node->GetMaterials();
+        for (size_t i = 0; i < mats.size(); i++)
+        {
+            mats[i]->SetInteger("DoubleSided", 1);
         }
     }
     if (!recalc_normals)
