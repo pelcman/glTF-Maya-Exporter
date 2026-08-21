@@ -1,3 +1,3 @@
 [submodule "src/KashikaNativeLib"]
 	path = src/KashikaNativeLib
-	url = https://github.com/kashikacojp/KashikaNativeLib.git
+	url = https://github.com/pelcman/KashikaNativeLib.git

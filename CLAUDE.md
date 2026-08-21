@@ -101,10 +101,11 @@ cmds.file(r'<tmp>/out.glb', force=True, options='', type='GLB Export', pr=True, 
 
 ## 既知の制約・注意点
 
-- **KashikaNativeLib は kashikacojp 所有の submodule。** push 権限が無いため、
-  submodule 内の修正が必要になった場合はフォーク(例: pelcman/KashikaNativeLib)
-  を作成して `.gitmodules` の URL を差し替えること。submodule 内のみのコミットは
-  他環境で再現できないので禁止。
+- **KashikaNativeLib submodule はフォーク pelcman/KashikaNativeLib を参照**
+  (2026-08-21 に doubleSided 対応のため切り替え。上流 kashikacojp には push
+  権限が無い)。submodule の変更は必ずフォークへ push してから本体の参照を
+  更新すること。push されていない submodule コミットの参照は他環境で
+  clone できなくなるので禁止。
 - draco は 1.3.3(2018 年)固定。新しい MSVC での警告/エラーが出た場合も
   draco 本体の更新は最終手段(glTF 側の API が変わるため)。
 - `cppexporter`(`GLTF_MAYA_EXPORTER_BUILD_CPP_INTERFACE`)は既定 OFF。壊さない
