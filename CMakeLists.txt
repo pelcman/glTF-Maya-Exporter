@@ -13,9 +13,9 @@ option(GLTF_MAYA_EXPORTER_BUILD_CPP_INTERFACE       "Build cpp interface and tes
 option(GLTF_MAYA_EXPORTER_SUPPORT_LTE_PBR_MATERIAL  "Build LTE_PBR_material support" ON)
 
 
-# Target Maya version (2017-2024). Used to locate the default Maya directory;
+# Target Maya version (2017-2027). Used to locate the default Maya directory;
 # override GLTF_MAYA_EXPORTER_MAYA_PATH directly for non-standard installs.
-SET(GLTF_MAYA_EXPORTER_MAYA_VERSION "2024" CACHE STRING "Target Maya version (e.g. 2017...2024)")
+SET(GLTF_MAYA_EXPORTER_MAYA_VERSION "2024" CACHE STRING "Target Maya version (e.g. 2017...2027)")
 
 if (WIN32)
     SET(GLTF_MAYA_EXPORTER_MAYA_PATH "C:/Program Files/Autodesk/Maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")

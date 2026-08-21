@@ -16,10 +16,10 @@ This repositry contains mel scripts and C++ source codes.
 
 ## Support Maya version
 
-We support MAYA2017 through MAYA2024 on Windows (build-verified with
-Maya 2022/2023/2024 + Visual Studio 2022; Maya 2017-2021 keep source
-compatibility via `MAYA_API_VERSION` guards but require their matching
-older toolchains for binary compatibility).
+We support MAYA2017 through MAYA2027 on Windows (build-verified with
+Maya 2022/2023/2024/2025/2026/2027 + Visual Studio 2022; Maya 2017-2021
+keep source compatibility via `MAYA_API_VERSION` guards but require their
+matching older toolchains for binary compatibility).
 
 macOS and Linux code paths are kept intact but are not currently verified.
 
