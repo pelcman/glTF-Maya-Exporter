@@ -26,8 +26,15 @@ glTF 2.0 / VRM exporter for Maya (v1.6.0, Maya 2017–2027)
 ## Limitations
 
 - Diffuse roughness cannot be exported (glTF diffuse is Lambertian)
-- StingrayPBS metallic / roughness / AO maps are not exported (scalar values are)
-- Texture-driven metalness etc. also export as scalar values
+- **Metallic / roughness / AO textures are not exported.**
+  Even when a texture is connected to these inputs (StingrayPBS maps,
+  a texture on aiStandardSurface metalness, etc.), the exported glTF
+  applies the material's single numeric value uniformly to the whole
+  model - per-area variation such as "only this part is metallic or
+  rough" is lost, so pick a representative value where needed.
+  Base color / normal / emissive textures are exported.
+  (glTF only accepts metallic and roughness packed together into one
+  metallicRoughnessTexture; merging separate images is not implemented.)
 - Verified on Windows only (macOS / Linux code paths are kept but untested)
 - Maya 2017–2021: source compatibility only; binaries require the matching
   older Visual Studio toolchain
