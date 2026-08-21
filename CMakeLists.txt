@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2.3)
+cmake_minimum_required(VERSION 3.15)
 
 #Use solution folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -13,10 +13,16 @@ option(GLTF_MAYA_EXPORTER_BUILD_CPP_INTERFACE       "Build cpp interface and tes
 option(GLTF_MAYA_EXPORTER_SUPPORT_LTE_PBR_MATERIAL  "Build LTE_PBR_material support" ON)
 
 
+# Target Maya version (2017-2024). Used to locate the default Maya directory;
+# override GLTF_MAYA_EXPORTER_MAYA_PATH directly for non-standard installs.
+SET(GLTF_MAYA_EXPORTER_MAYA_VERSION "2024" CACHE STRING "Target Maya version (e.g. 2017...2024)")
+
 if (WIN32)
-    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "C:/Program Files/Autodesk/Maya2018" CACHE PATH "Installed Maya Directory")
+    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "C:/Program Files/Autodesk/Maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")
 elseif(APPLE)
-    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "/Applications/Autodesk/maya2018" CACHE PATH "Installed Maya Directory")
+    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "/Applications/Autodesk/maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")
+elseif(UNIX)
+    SET(GLTF_MAYA_EXPORTER_MAYA_PATH "/usr/autodesk/maya${GLTF_MAYA_EXPORTER_MAYA_VERSION}" CACHE PATH "Installed Maya Directory")
 endif()
 
 if (GLTF_MAYA_EXPORTER_SUPPORT_LTE_PBR_MATERIAL)
